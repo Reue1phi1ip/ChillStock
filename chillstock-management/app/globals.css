@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f2f5f1;
+  --foreground: #171d19;
+  --card: rgba(251, 252, 249, 0.92);
+  --card-strong: #f7fbf8;
+  --primary: #18685f;
+  --primary-foreground: #f7fffb;
+  --secondary: #dfe9e1;
+  --muted: #e7eee9;
+  --muted-foreground: #62716a;
+  --border: rgba(23, 29, 25, 0.1);
+  --ring: #18685f;
+  --surface-glow: radial-gradient(circle at top right, rgba(73, 127, 96, 0.16), transparent 34%);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Avenir Next", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+html {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.24), transparent 24%),
+    linear-gradient(135deg, #edf2ea, #f6f8f4 48%, #eaf3ed);
+}
+
+body {
+  min-height: 100vh;
+  background:
+    var(--surface-glow),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(242, 245, 241, 0.98));
+  color: var(--foreground);
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button,
+a,
+input,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: rgba(31, 107, 82, 0.18);
+  color: #163b2d;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-rise-in {
+  animation: rise-in 260ms ease-out both;
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-panel-in {
+  animation: panel-in 220ms ease-out both;
+}
+
+.tiptap-notification-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: #94a3b8;
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
