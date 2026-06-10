@@ -1,0 +1,141 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f8f8fb;
+  --foreground: #16213d;
+  --card: rgba(255, 255, 255, 0.52);
+  --primary: #0f766e;
+  --primary-foreground: #ffffff;
+  --secondary: rgba(255, 255, 255, 0.52);
+  --muted: rgba(255, 255, 255, 0.34);
+  --muted-foreground: #556684;
+  --border: rgba(255, 255, 255, 0.62);
+  --ring: #0f766e;
+  --font-display: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: var(--font-display);
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+html {
+  background:
+    radial-gradient(circle at 14% 14%, rgba(255, 205, 178, 0.9), transparent 28%),
+    radial-gradient(circle at 85% 10%, rgba(219, 215, 255, 0.85), transparent 30%),
+    radial-gradient(circle at 84% 86%, rgba(188, 245, 228, 0.92), transparent 34%),
+    radial-gradient(circle at 14% 88%, rgba(255, 238, 198, 0.92), transparent 31%),
+    radial-gradient(circle at 50% 48%, rgba(255, 255, 255, 0.72), transparent 36%),
+    linear-gradient(140deg, #fff4eb 0%, #f0efff 48%, #def8f0 100%);
+}
+
+body {
+  min-height: 100dvh;
+  background: var(--background);
+  background:
+    radial-gradient(circle at 14% 14%, rgba(255, 205, 178, 0.9), transparent 28%),
+    radial-gradient(circle at 85% 10%, rgba(219, 215, 255, 0.85), transparent 30%),
+    radial-gradient(circle at 84% 86%, rgba(188, 245, 228, 0.92), transparent 34%),
+    radial-gradient(circle at 14% 88%, rgba(255, 238, 198, 0.92), transparent 31%),
+    radial-gradient(circle at 50% 48%, rgba(255, 255, 255, 0.72), transparent 36%),
+    linear-gradient(140deg, #fff4eb 0%, #f0efff 48%, #def8f0 100%);
+  color: var(--foreground);
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button,
+a,
+input {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: #99f6e4;
+  color: #134e4a;
+}
+
+@keyframes float-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-float-in {
+  animation: float-in 360ms ease-out both;
+}
+
+@keyframes scan-frame-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(57, 91, 255, 0.18),
+      0 0 24px rgba(57, 91, 255, 0.18);
+    opacity: 0.92;
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 6px rgba(57, 91, 255, 0.06),
+      0 0 34px rgba(57, 91, 255, 0.34);
+    opacity: 1;
+  }
+}
+
+.scan-frame-corner {
+  position: absolute;
+  width: 4.75rem;
+  height: 4.75rem;
+  border-color: #395bff;
+  border-style: solid;
+  border-width: 0;
+  animation: scan-frame-pulse 1.9s ease-in-out infinite;
+}
+
+.scan-frame-corner-tl {
+  top: 0;
+  left: 0;
+  border-top-width: 0.36rem;
+  border-left-width: 0.36rem;
+  border-top-left-radius: 1.6rem;
+}
+
+.scan-frame-corner-tr {
+  top: 0;
+  right: 0;
+  border-top-width: 0.36rem;
+  border-right-width: 0.36rem;
+  border-top-right-radius: 1.6rem;
+}
+
+.scan-frame-corner-bl {
+  bottom: 0;
+  left: 0;
+  border-bottom-width: 0.36rem;
+  border-left-width: 0.36rem;
+  border-bottom-left-radius: 1.6rem;
+}
+
+.scan-frame-corner-br {
+  right: 0;
+  bottom: 0;
+  border-right-width: 0.36rem;
+  border-bottom-width: 0.36rem;
+  border-bottom-right-radius: 1.6rem;
+}
