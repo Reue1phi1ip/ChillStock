@@ -7,6 +7,7 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { Icon, type IconName } from "@/components/icons/Icon";
 import { AppShell } from "@/components/layout/AppShell";
 import { useAppContext } from "@/components/providers/AppProvider";
+import { GuestLoadingScreen } from "@/components/shared/GuestLoadingScreen";
 import { guestTypography } from "@/components/shared/guestTypography";
 import { ScreenHeader } from "@/components/shared/ScreenHeader";
 import { cn } from "@/lib/utils";
@@ -41,7 +42,7 @@ const socialButtons: Array<{
 
 export function AuthScreen() {
   const searchParams = useSearchParams();
-  const { signIn } = useAuthActions();
+  const { signIn, signOut } = useAuthActions();
   const { isAuthenticated, isSessionBootstrapping, sessionBootstrapError, sessionStatus } =
     useAppContext();
   const [mode, setMode] = useState<AuthMode>("signup");
@@ -49,7 +50,7 @@ export function AuthScreen() {
   const [error, setError] = useState("");
   const [authInProgress, setAuthInProgress] = useState<string | null>(null);
   const fridgeCode = searchParams.get("fridgeCode")?.trim() || "";
-  const isPrototypeLaunch = searchParams.get("prototype") === "1";
+  const isQrAuthChoicePending = Boolean(fridgeCode) && searchParams.get("authReady") !== "1";
 
   const handleAuth = async (method: string) => {
     if (mode === "signup" && !ageValidated) {
@@ -62,7 +63,15 @@ export function AuthScreen() {
     setError("");
 
     try {
-      const redirectTo = window.location.href;
+      const redirectUrl = new URL(window.location.href);
+      redirectUrl.searchParams.delete("switchAccount");
+      redirectUrl.searchParams.delete("prototype");
+      redirectUrl.searchParams.set("authReady", "1");
+      const redirectTo = redirectUrl.toString();
+
+      if (isAuthenticated) {
+        await signOut();
+      }
 
       await signIn(method, { redirectTo });
     } catch (authError) {
@@ -73,27 +82,15 @@ export function AuthScreen() {
     }
   };
 
-  if (isAuthenticated && isSessionBootstrapping) {
+  if (isAuthenticated && isSessionBootstrapping && !isQrAuthChoicePending) {
     return (
       <AppShell>
-        <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center py-6">
-          <div className="rounded-[2rem] border border-white/60 bg-white/48 p-6 text-center shadow-[0_22px_50px_rgba(111,128,156,0.14)] backdrop-blur-[18px] sm:p-8">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-50 text-teal-700">
-              <span className="h-5 w-5 animate-spin rounded-full border-2 border-teal-200 border-t-teal-700" />
-            </div>
-            <div className="space-y-2">
-              <h1 className={guestTypography.pageTitle}>Preparing your stay</h1>
-              <p className={guestTypography.bodyMuted}>
-                We&apos;re syncing your guest access and sending you to the right next step.
-              </p>
-            </div>
-          </div>
-        </div>
+        <GuestLoadingScreen />
       </AppShell>
     );
   }
 
-  if (isAuthenticated && !sessionStatus) {
+  if (isAuthenticated && !sessionStatus && !isQrAuthChoicePending) {
     return (
       <AppShell>
         <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center space-y-5 py-4 sm:space-y-6 sm:py-6">
@@ -110,7 +107,6 @@ export function AuthScreen() {
               {fridgeCode ? (
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
                   Fridge code: {fridgeCode}
-                  {isPrototypeLaunch ? " · prototype" : ""}
                 </p>
               ) : null}
             </div>
@@ -145,7 +141,7 @@ export function AuthScreen() {
         {fridgeCode ? (
           <div className="rounded-[1.6rem] border border-teal-100 bg-teal-50/78 px-4 py-3 text-sm text-teal-900">
             Starting access for fridge <span className="font-semibold">{fridgeCode}</span>
-            {isPrototypeLaunch ? " in prototype mode." : "."}
+            .
           </div>
         ) : (
           <div className="rounded-[1.6rem] border border-orange-100 bg-orange-50/78 px-4 py-3 text-sm text-orange-900">

@@ -137,6 +137,7 @@ export async function buildGuestCatalog(ctx: QueryCtx, fridgeId: Id<"fridges">) 
       type: product.type,
       priceCents: product.priceCents,
       imageColor: product.imageColor,
+      imageUrl: product.imageUrl,
     }))
     .sort((left, right) => {
       if (left.type !== right.type) return left.type.localeCompare(right.type);
@@ -336,6 +337,7 @@ export const createCatalogItem = mutation({
     volume: v.string(),
     abv: v.optional(v.string()),
     imageColor: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
     initialQuantity: v.number(),
   },
   handler: async (ctx, args) => {
@@ -356,6 +358,7 @@ export const createCatalogItem = mutation({
       abv: args.abv?.trim() || undefined,
       volume: args.volume.trim(),
       imageColor: args.imageColor?.trim() || "bg-amber-100",
+      imageUrl: trimOptional(args.imageUrl),
       inStock: true,
       createdAt: Date.now(),
     });

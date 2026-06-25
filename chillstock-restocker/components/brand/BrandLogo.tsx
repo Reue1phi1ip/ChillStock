@@ -37,7 +37,7 @@ export function BrandLogo({
         </span>
       )}
       <span className={cn("font-display font-semibold tracking-tight text-slate-950", sizing.text)}>
-        Chill<span className="text-teal-700">Stock</span>
+        Chilled<span className="text-teal-700">Stock</span>
       </span>
     </div>
   );

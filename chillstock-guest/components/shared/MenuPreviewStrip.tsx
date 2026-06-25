@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon, type IconName } from "@/components/icons/Icon";
 import { cn } from "@/lib/utils";
@@ -10,6 +11,7 @@ type MenuPreviewItem = {
   name: string;
   type: string;
   imageColor: string;
+  imageUrl?: string;
 };
 
 type MenuPreviewStripProps = {
@@ -27,6 +29,34 @@ function iconForProductType(type: string): IconName {
   if (normalized.includes("water") || normalized.includes("mixer")) return "droplet";
   if (normalized.includes("beer")) return "beer";
   return "shopping-bag";
+}
+
+function PreviewPhoto({ item }: { item: MenuPreviewItem }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const productIcon = iconForProductType(item.type);
+
+  if (item.imageUrl && !imageFailed) {
+    return (
+      <Image
+        alt=""
+        className="object-cover"
+        fill
+        loading="lazy"
+        onError={() => setImageFailed(true)}
+        sizes="128px"
+        src={item.imageUrl}
+      />
+    );
+  }
+
+  return (
+    <>
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.58),transparent_62%)]" />
+      <div className="relative flex h-9 w-9 items-center justify-center rounded-[0.75rem] border border-white/55 bg-white/70 text-slate-900 shadow-[0_10px_20px_rgba(74,88,118,0.1)] backdrop-blur">
+        <Icon name={productIcon} size={18} strokeWidth={1.7} />
+      </div>
+    </>
+  );
 }
 
 export function MenuPreviewStrip({
@@ -152,10 +182,7 @@ export function MenuPreviewStrip({
                   item.imageColor || "bg-amber-100",
                 )}
               >
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.58),transparent_62%)]" />
-                <div className="relative flex h-9 w-9 items-center justify-center rounded-[0.75rem] border border-white/55 bg-white/70 text-slate-900 shadow-[0_10px_20px_rgba(74,88,118,0.1)] backdrop-blur">
-                  <Icon name={iconForProductType(item.type)} size={18} strokeWidth={1.7} />
-                </div>
+                <PreviewPhoto item={item} />
               </div>
               <div className="px-2 py-1.5">
                 <p className="line-clamp-2 text-xs font-semibold leading-tight text-slate-900">{item.name}</p>

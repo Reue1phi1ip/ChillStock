@@ -28,7 +28,7 @@ export function AppShell({
       <div className="flex min-h-[calc(100dvh-2rem)] w-full overflow-hidden rounded-[32px] border border-white/70 bg-[rgba(248,251,248,0.82)] shadow-[0_28px_90px_rgba(39,67,55,0.12)] backdrop-blur-[18px]">
         <aside className="hidden w-[288px] shrink-0 border-r border-[rgba(23,29,25,0.08)] bg-[linear-gradient(180deg,rgba(245,249,246,0.96),rgba(238,244,240,0.86))] lg:flex lg:flex-col">
           <div className="border-b border-[rgba(23,29,25,0.08)] px-6 py-6">
-            <Link aria-label="ChillStock management home" href="/">
+            <Link aria-label="ChilledStock management home" href="/">
               <BrandLogo size="md" />
             </Link>
             <p className="mt-4 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
@@ -70,7 +70,7 @@ export function AppShell({
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="space-y-1">
                   <div className="lg:hidden">
-                    <Link aria-label="ChillStock management home" href="/">
+                    <Link aria-label="ChilledStock management home" href="/">
                       <BrandLogo size="md" />
                     </Link>
                   </div>

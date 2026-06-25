@@ -14,8 +14,9 @@ import {
   resolveAddedSelections,
   resolveConsumedSelections,
 } from "./inventory";
+import { products as demoProducts } from "./dev";
 
-const DEMO_FRIDGE_CODE = "demo-fridge";
+const DEMO_FRIDGE_CODE = "7429";
 const DEFAULT_DEPOSIT_HOLD_CENTS = 4000;
 const FULL_RESTOCK_TOP_UP_CENTS = 4000;
 const MAX_GUEST_NOTE_LENGTH = 200;
@@ -108,17 +109,83 @@ async function getOrCreateDemoFridge(ctx: MutationCtx) {
     .withIndex("by_code", (q) => q.eq("code", DEMO_FRIDGE_CODE))
     .unique();
 
-  if (existing) return existing._id;
+  if (existing) {
+    await ensureDemoFridgeInventory(ctx, existing._id);
+    return existing._id;
+  }
 
-  return await ctx.db.insert("fridges", {
+  const fridgeId = await ctx.db.insert("fridges", {
     code: DEMO_FRIDGE_CODE,
-    name: "ChillStock Demo Fridge",
+    name: "ChilledStock Demo Fridge",
     hotelName: "The Dunes Hotel",
     area: "South Shore",
     location: "Guest suite",
     status: "active",
     createdAt: Date.now(),
   });
+
+  await ensureDemoFridgeInventory(ctx, fridgeId);
+  return fridgeId;
+}
+
+async function ensureDemoFridgeInventory(
+  ctx: MutationCtx,
+  fridgeId: Id<"fridges">,
+) {
+  const existingProducts = await ctx.db.query("products").collect();
+  const productsByName = new Map(existingProducts.map((product) => [product.name, product]));
+  const productIds: Id<"products">[] = [];
+
+  for (const product of demoProducts) {
+    const existingProduct = productsByName.get(product.name);
+
+    if (existingProduct) {
+      productIds.push(existingProduct._id);
+
+      if (existingProduct.imageUrl !== product.imageUrl) {
+        await ctx.db.patch(existingProduct._id, {
+          imageUrl: product.imageUrl,
+        });
+      }
+
+      continue;
+    }
+
+    const productId = await ctx.db.insert("products", {
+      ...product,
+      inStock: true,
+      createdAt: Date.now(),
+    });
+
+    productIds.push(productId);
+  }
+
+  const existingStock = await ctx.db
+    .query("hotelInventory")
+    .withIndex("by_fridge", (q) => q.eq("fridgeId", fridgeId))
+    .collect();
+  const stockedProductIds = new Set(existingStock.map((row) => row.productId));
+
+  for (const productId of productIds) {
+    if (stockedProductIds.has(productId)) continue;
+
+    await ctx.db.insert("hotelInventory", {
+      fridgeId,
+      productId,
+      quantityAvailable: 50,
+      updatedAt: Date.now(),
+    });
+
+    await ctx.db.insert("inventoryEvents", {
+      fridgeId,
+      productId,
+      quantityDelta: 50,
+      reason: "demo_seed_stock",
+      actorName: "Demo Seed",
+      actorType: "system",
+      createdAt: Date.now(),
+    });
+  }
 }
 
 function normalizeFridgeCode(code: string | undefined | null) {
@@ -651,6 +718,8 @@ export const getCurrent = query({
     const session = await currentSessionForUser(ctx, userId);
     if (!session) return null;
 
+    const fridge = await ctx.db.get(session.fridgeId);
+
     const ledgerEvents = await ctx.db
       .query("ledgerEvents")
       .withIndex("by_session", (q) => q.eq("sessionId", session._id))
@@ -692,6 +761,7 @@ export const getCurrent = query({
 
     return {
       session,
+      fridgeCode: fridge?.code ?? null,
       defaultDepositHoldCents: DEFAULT_DEPOSIT_HOLD_CENTS,
       totalAuthorizedCents,
       totalConsumedCents,
@@ -853,12 +923,12 @@ export const payRequiredTopUp = mutation({
         userId,
         type: "checkout_reconciled",
         title: "Checkout Complete",
-        message: "Your final top-up was received and your ChillStock tab is closed.",
+        message: "Your final top-up was received and your ChilledStock tab is closed.",
       });
       await syncIncomeTicketForRequest(ctx, {
         reconciliationRequestId: request._id,
         actorType: "system",
-        actorName: "ChillStock Billing",
+        actorName: "ChilledStock Billing",
         action: "closed",
         message: "Guest settled the outstanding checkout amount.",
         patch: {
@@ -895,7 +965,7 @@ export const payRequiredTopUp = mutation({
     await syncTicketForReconciliation(ctx, {
       reconciliationRequestId: request._id,
       actorType: "system",
-      actorName: "ChillStock Billing",
+      actorName: "ChilledStock Billing",
       action: "resolved",
       message:
         request.type === "add_on"
@@ -910,7 +980,7 @@ export const payRequiredTopUp = mutation({
     await syncIncomeTicketForRequest(ctx, {
       reconciliationRequestId: request._id,
       actorType: "system",
-      actorName: "ChillStock Billing",
+      actorName: "ChilledStock Billing",
       action: "closed",
       message:
         request.type === "add_on"

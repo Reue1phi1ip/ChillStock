@@ -27,6 +27,38 @@ const AuthBootstrapContext = createContext<AuthBootstrapContextValue>({
   sessionBootstrapError: null,
 });
 
+function getFridgeCodeFromUrlLikeValue(value: string) {
+  const trimmedValue = value.trim();
+  if (!trimmedValue) return undefined;
+  if (/^\d{4,}$/.test(trimmedValue)) return trimmedValue;
+
+  try {
+    const url = new URL(trimmedValue);
+    const nestedCode =
+      url.searchParams.get("fridgeCode") ??
+      url.searchParams.get("fridgecode") ??
+      url.searchParams.get("fridge_code") ??
+      url.searchParams.get("code");
+    if (nestedCode?.trim()) return nestedCode.trim();
+  } catch {
+    // Continue with partial query parsing below.
+  }
+
+  const queryStart = trimmedValue.indexOf("?");
+  if (queryStart !== -1) {
+    const query = trimmedValue.slice(queryStart + 1).split("#")[0];
+    const params = new URLSearchParams(query);
+    const nestedCode =
+      params.get("fridgeCode") ??
+      params.get("fridgecode") ??
+      params.get("fridge_code") ??
+      params.get("code");
+    if (nestedCode?.trim()) return nestedCode.trim();
+  }
+
+  return trimmedValue;
+}
+
 export function AuthBootstrap({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const searchParams = useSearchParams();
@@ -36,8 +68,8 @@ export function AuthBootstrap({ children }: { children: ReactNode }) {
   const [isSessionBootstrapping, setIsSessionBootstrapping] = useState(false);
   const [bootstrappedSessionId, setBootstrappedSessionId] = useState<string | null>(null);
   const [sessionBootstrapError, setSessionBootstrapError] = useState<string | null>(null);
-  const fridgeCode = searchParams.get("fridgeCode")?.trim() || undefined;
-  const isPrototypeLaunch = searchParams.get("prototype") === "1";
+  const fridgeCode = getFridgeCodeFromUrlLikeValue(searchParams.get("fridgeCode") ?? "");
+  const isQrAuthChoicePending = Boolean(fridgeCode) && searchParams.get("authReady") !== "1";
 
   useEffect(() => {
     let cancelled = false;
@@ -45,6 +77,21 @@ export function AuthBootstrap({ children }: { children: ReactNode }) {
     if (isLoading) return;
 
     if (!isAuthenticated) {
+      queueMicrotask(() => {
+        if (!cancelled) {
+          setHasAttemptedSessionBootstrap(false);
+          setIsSessionBootstrapping(false);
+          setBootstrappedSessionId(null);
+          setSessionBootstrapError(null);
+        }
+      });
+
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    if (isQrAuthChoicePending) {
       queueMicrotask(() => {
         if (!cancelled) {
           setHasAttemptedSessionBootstrap(false);
@@ -74,7 +121,6 @@ export function AuthBootstrap({ children }: { children: ReactNode }) {
           ensureCurrentUser(),
           startOrResumeSession({
             fridgeCode,
-            forceFreshPrototype: isPrototypeLaunch,
           }),
         ]);
         if (cancelled) return;
@@ -102,7 +148,7 @@ export function AuthBootstrap({ children }: { children: ReactNode }) {
     fridgeCode,
     isAuthenticated,
     isLoading,
-    isPrototypeLaunch,
+    isQrAuthChoicePending,
     startOrResumeSession,
   ]);
 

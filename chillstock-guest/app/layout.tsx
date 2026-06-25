@@ -6,8 +6,8 @@ import { ConvexClientProvider } from "@/components/providers/ConvexClientProvide
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ChillStock Guest",
-  description: "A guest flow prototype for ChillStock smart fridges.",
+  title: "ChilledStock Guest",
+  description: "A guest flow prototype for ChilledStock smart fridges.",
 };
 
 export default function RootLayout({

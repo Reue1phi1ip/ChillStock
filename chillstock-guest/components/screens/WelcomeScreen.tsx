@@ -46,9 +46,9 @@ export function WelcomeScreen() {
           {prototypeModeEnabled ? (
             <Link
               className="inline-flex items-center justify-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-slate-800"
-              href={`/auth?fridgeCode=${encodeURIComponent(defaultPrototypeFridgeCode)}&prototype=1`}
+              href={`/auth?fridgeCode=${encodeURIComponent(defaultPrototypeFridgeCode)}`}
             >
-              <span>Run prototype workflow</span>
+              <span>Open demo fridge</span>
               <Icon name="arrow-right" size={14} />
             </Link>
           ) : null}

@@ -10,9 +10,9 @@ import { Button } from "@/components/ui/button";
 
 export function UnlockScreen() {
   const router = useRouter();
-  const { guestDisplayName, isLoading, isReturningUser, unlockCode } = useAppContext();
+  const { accessCode, guestDisplayName, isLoading, isReturningUser } = useAppContext();
   const [copied, setCopied] = useState(false);
-  const code = unlockCode ?? "----";
+  const code = accessCode ?? "----";
   const welcomeBackCopy = isReturningUser
     ? guestDisplayName
       ? `Welcome back, ${guestDisplayName}`
@@ -20,7 +20,7 @@ export function UnlockScreen() {
     : null;
 
   const handleCopy = async () => {
-    if (!unlockCode) return;
+    if (!accessCode) return;
     await navigator.clipboard.writeText(code);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);

@@ -42,6 +42,7 @@ export function DashboardScreen() {
         name: item.name,
         type: item.type,
         imageColor: item.imageColor,
+        imageUrl: item.imageUrl,
       })),
     [mainMenuInventory],
   );
@@ -52,6 +53,7 @@ export function DashboardScreen() {
         name: item.name,
         type: item.type,
         imageColor: item.imageColor,
+        imageUrl: item.imageUrl,
       })),
     [addOnInventory],
   );
@@ -137,7 +139,7 @@ export function DashboardScreen() {
 
         {isLoading && (
           <div className="rounded-[1.8rem] border border-white/60 bg-white/48 p-4 text-sm text-slate-600 shadow-[0_20px_46px_rgba(108,123,153,0.14)] backdrop-blur-[18px]">
-            Loading your ChillStock tab...
+            Loading your ChilledStock tab...
           </div>
         )}
 

@@ -3,7 +3,7 @@ import { ConvexClientProvider } from "@/components/providers/ConvexClientProvide
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ChillStock Management",
+  title: "ChilledStock Management",
   description: "Operations dashboard for ticket triage, stock monitoring, and overflow routing.",
 };
 

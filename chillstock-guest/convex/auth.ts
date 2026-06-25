@@ -3,7 +3,16 @@ import Apple from "@auth/core/providers/apple";
 import Google from "@auth/core/providers/google";
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
-  providers: [Google, Apple],
+  providers: [
+    Google({
+      authorization: {
+        params: {
+          prompt: "select_account",
+        },
+      },
+    }),
+    Apple,
+  ],
   callbacks: {
     async redirect({ redirectTo }) {
       const siteUrl = (process.env.SITE_URL ?? "http://localhost:3000").replace(/\/$/, "");

@@ -85,6 +85,7 @@ export default defineSchema({
     abv: v.optional(v.string()),
     volume: v.string(),
     imageColor: v.string(),
+    imageUrl: v.optional(v.string()),
     inStock: v.boolean(),
     createdAt: v.number(),
   })

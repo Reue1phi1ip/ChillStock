@@ -372,7 +372,7 @@ export async function createRefillTicketForRequest(
 
   const ticketId = await createTicket(ctx, {
     actorType: "system",
-    actorName: "ChillStock Router",
+    actorName: "ChilledStock Router",
     area: fridge?.area,
     assignedRestockerId: assignedRestocker?._id,
     assignedRestockerName: assignedRestocker?.name,
@@ -455,7 +455,7 @@ export async function createIncomeTicketForRequest(
     await appendTicketEvent(ctx, {
       ticketId: existingIncomeTicket._id,
       actorType: "system",
-      actorName: "ChillStock Billing",
+      actorName: "ChilledStock Billing",
       action: "reopened",
       message: args.description,
     });
@@ -466,7 +466,7 @@ export async function createIncomeTicketForRequest(
   const session = await ctx.db.get(args.request.sessionId);
   return await createTicket(ctx, {
     actorType: "system",
-    actorName: "ChillStock Billing",
+    actorName: "ChilledStock Billing",
     area: fridge?.area,
     customerLabel: session ? `QR ${session.unlockCode}` : undefined,
     description: args.description,

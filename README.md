@@ -1,4 +1,4 @@
-# ChillStock Workspace
+# ChilledStock Workspace
 
 This workspace currently has three frontend apps:
 

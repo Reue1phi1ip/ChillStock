@@ -17,7 +17,7 @@ export function AppShell({
         <header className="border-b border-slate-200/80 bg-white/75 px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <Link aria-label="ChillStock restocker home" href="/">
+              <Link aria-label="ChilledStock restocker home" href="/">
                 <BrandLogo size="md" />
               </Link>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">

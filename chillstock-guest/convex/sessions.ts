@@ -14,8 +14,9 @@ import {
   resolveAddedSelections,
   resolveConsumedSelections,
 } from "./inventory";
+import { products as demoProducts } from "./dev";
 
-const DEMO_FRIDGE_CODE = "demo-fridge";
+const DEMO_FRIDGE_CODE = "7429";
 const DEFAULT_DEPOSIT_HOLD_CENTS = 4000;
 const FULL_RESTOCK_TOP_UP_CENTS = 4000;
 const MAX_GUEST_NOTE_LENGTH = 200;
@@ -108,22 +109,115 @@ async function getOrCreateDemoFridge(ctx: MutationCtx) {
     .withIndex("by_code", (q) => q.eq("code", DEMO_FRIDGE_CODE))
     .unique();
 
-  if (existing) return existing._id;
+  if (existing) {
+    await ensureDemoFridgeInventory(ctx, existing._id);
+    return existing._id;
+  }
 
-  return await ctx.db.insert("fridges", {
+  const fridgeId = await ctx.db.insert("fridges", {
     code: DEMO_FRIDGE_CODE,
-    name: "ChillStock Demo Fridge",
+    name: "ChilledStock Demo Fridge",
     hotelName: "The Dunes Hotel",
     area: "South Shore",
     location: "Guest suite",
     status: "active",
     createdAt: Date.now(),
   });
+
+  await ensureDemoFridgeInventory(ctx, fridgeId);
+  return fridgeId;
+}
+
+async function ensureDemoFridgeInventory(
+  ctx: MutationCtx,
+  fridgeId: Id<"fridges">,
+) {
+  const existingProducts = await ctx.db.query("products").collect();
+  const productsByName = new Map(existingProducts.map((product) => [product.name, product]));
+  const productIds: Id<"products">[] = [];
+
+  for (const product of demoProducts) {
+    const existingProduct = productsByName.get(product.name);
+
+    if (existingProduct) {
+      productIds.push(existingProduct._id);
+
+      if (existingProduct.imageUrl !== product.imageUrl) {
+        await ctx.db.patch(existingProduct._id, {
+          imageUrl: product.imageUrl,
+        });
+      }
+
+      continue;
+    }
+
+    const productId = await ctx.db.insert("products", {
+      ...product,
+      inStock: true,
+      createdAt: Date.now(),
+    });
+
+    productIds.push(productId);
+  }
+
+  const existingStock = await ctx.db
+    .query("hotelInventory")
+    .withIndex("by_fridge", (q) => q.eq("fridgeId", fridgeId))
+    .collect();
+  const stockedProductIds = new Set(existingStock.map((row) => row.productId));
+
+  for (const productId of productIds) {
+    if (stockedProductIds.has(productId)) continue;
+
+    await ctx.db.insert("hotelInventory", {
+      fridgeId,
+      productId,
+      quantityAvailable: 50,
+      updatedAt: Date.now(),
+    });
+
+    await ctx.db.insert("inventoryEvents", {
+      fridgeId,
+      productId,
+      quantityDelta: 50,
+      reason: "demo_seed_stock",
+      actorName: "Demo Seed",
+      actorType: "system",
+      createdAt: Date.now(),
+    });
+  }
 }
 
 function normalizeFridgeCode(code: string | undefined | null) {
   const trimmed = code?.trim();
-  return trimmed ? trimmed : undefined;
+  if (!trimmed) return undefined;
+  if (/^\d{4,}$/.test(trimmed)) return trimmed;
+
+  try {
+    const url = new URL(trimmed);
+    const nestedCode =
+      url.searchParams.get("fridgeCode") ??
+      url.searchParams.get("fridgecode") ??
+      url.searchParams.get("fridge_code") ??
+      url.searchParams.get("code");
+    if (nestedCode?.trim()) return nestedCode.trim();
+  } catch {
+    // Continue with partial query parsing below.
+  }
+
+  const queryStart = trimmed.indexOf("?");
+  if (queryStart !== -1) {
+    const query = trimmed.slice(queryStart + 1).split("#")[0];
+    const params = new URLSearchParams(query);
+    const nestedCode =
+      params.get("fridgeCode") ??
+      params.get("fridgecode") ??
+      params.get("fridge_code") ??
+      params.get("code");
+    if (nestedCode?.trim()) return nestedCode.trim();
+  }
+
+  return trimmed;
 }
 
 async function findFridgeByCode(
@@ -202,10 +296,41 @@ async function latestOpenSessionForUser(ctx: QueryCtx | MutationCtx, userId: Id<
   ]);
 }
 
-async function currentSessionForUser(ctx: QueryCtx | MutationCtx, userId: Id<"users">) {
+async function openSessionForFridgeOwnedByAnotherUser(
+  ctx: QueryCtx | MutationCtx,
+  fridgeId: Id<"fridges">,
+  userId: Id<"users">,
+) {
+  const openStatuses: Doc<"guestSessions">["status"][] = [
+    "active",
+    "checkout_pending",
+  ];
+  const sessions = await Promise.all(
+    openStatuses.map((status) =>
+      ctx.db
+        .query("guestSessions")
+        .withIndex("by_fridge_status", (q) => q.eq("fridgeId", fridgeId).eq("status", status))
+        .order("desc")
+        .first(),
+    ),
+  );
+
+  return (
+    sessions
+      .filter((session): session is Doc<"guestSessions"> => Boolean(session))
+      .filter((session) => session.userId !== userId)
+      .sort((a, b) => b.createdAt - a.createdAt)[0] ?? null
+  );
+}
+
+async function currentSessionForUser(
+  ctx: QueryCtx | MutationCtx,
+  userId: Id<"users">,
+  options?: { includeCheckedOut?: boolean },
+) {
   return (
     (await latestOpenSessionForUser(ctx, userId)) ??
-    (await sessionForUserByStatus(ctx, userId, "checked_out"))
+    (options?.includeCheckedOut ? await sessionForUserByStatus(ctx, userId, "checked_out") : null)
   );
 }
 
@@ -227,52 +352,20 @@ async function createGuestSession(
   return session;
 }
 
-async function closeOpenSessionsForUser(
-  ctx: MutationCtx,
-  userId: Id<"users">,
-) {
-  const openStatuses: Doc<"guestSessions">["status"][] = [
-    "deposit_pending",
-    "active",
-    "checkout_pending",
-  ];
-
-  const sessions = await Promise.all(
-    openStatuses.map((status) => sessionForUserByStatus(ctx, userId, status)),
-  );
-
-  for (const session of sessions) {
-    if (!session) continue;
-    await ctx.db.patch(session._id, {
-      status: "checked_out",
-      checkedOutAt: Date.now(),
-    });
-  }
-}
-
 async function getOrCreateCurrentSession(
   ctx: MutationCtx,
   userId: Id<"users">,
   fridgeCode?: string,
-  options?: { forceFreshPrototype?: boolean },
 ) {
   const normalizedCode = normalizeFridgeCode(fridgeCode);
-  const forceFreshPrototype = options?.forceFreshPrototype ?? false;
-
-  if (forceFreshPrototype) {
-    if (!normalizedCode) return null;
-    const fridge = await resolveFridgeByCode(ctx, normalizedCode);
-    await closeOpenSessionsForUser(ctx, userId);
-    return await createGuestSession(ctx, userId, fridge._id);
-  }
-
   const existingOpenSession = await latestOpenSessionForUser(ctx, userId);
 
-  if (existingOpenSession) {
-    if (!normalizedCode) return existingOpenSession;
+  if (!normalizedCode) return existingOpenSession ?? null;
 
-    const existingFridge = await ctx.db.get(existingOpenSession.fridgeId);
-    if (existingFridge?.code === normalizedCode) {
+  const fridge = await resolveFridgeByCode(ctx, normalizedCode);
+
+  if (existingOpenSession) {
+    if (existingOpenSession.fridgeId === fridge._id) {
       return existingOpenSession;
     }
 
@@ -281,9 +374,17 @@ async function getOrCreateCurrentSession(
     );
   }
 
-  if (!normalizedCode) return null;
+  const occupiedSession = await openSessionForFridgeOwnedByAnotherUser(
+    ctx,
+    fridge._id,
+    userId,
+  );
+  if (occupiedSession) {
+    throw new Error(
+      "This fridge is currently linked to another active guest stay. Please finish checkout before starting a new stay.",
+    );
+  }
 
-  const fridge = await resolveFridgeByCode(ctx, normalizedCode);
   return await createGuestSession(ctx, userId, fridge._id);
 }
 
@@ -612,9 +713,7 @@ export const startOrResume = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await requireUser(ctx);
-    const session = await getOrCreateCurrentSession(ctx, userId, args.fridgeCode, {
-      forceFreshPrototype: args.forceFreshPrototype ?? false,
-    });
+    const session = await getOrCreateCurrentSession(ctx, userId, args.fridgeCode);
     return session?._id ?? null;
   },
 });
@@ -643,13 +742,17 @@ export const listPrototypeFridges = query({
 });
 
 export const getCurrent = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { includeCheckedOut: v.optional(v.boolean()) },
+  handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) return null;
 
-    const session = await currentSessionForUser(ctx, userId);
+    const session = await currentSessionForUser(ctx, userId, {
+      includeCheckedOut: args.includeCheckedOut ?? false,
+    });
     if (!session) return null;
+
+    const fridge = await ctx.db.get(session.fridgeId);
 
     const ledgerEvents = await ctx.db
       .query("ledgerEvents")
@@ -692,6 +795,7 @@ export const getCurrent = query({
 
     return {
       session,
+      fridgeCode: fridge?.code ?? null,
       defaultDepositHoldCents: DEFAULT_DEPOSIT_HOLD_CENTS,
       totalAuthorizedCents,
       totalConsumedCents,
@@ -728,6 +832,17 @@ export const authorizeDepositHold = mutation({
     if (session.status !== "deposit_pending") {
       session = await createGuestSession(ctx, userId, session.fridgeId);
       totalAuthorizedCents = await totalAuthorizedCentsForSession(ctx, session._id);
+    }
+
+    const occupiedSession = await openSessionForFridgeOwnedByAnotherUser(
+      ctx,
+      session.fridgeId,
+      userId,
+    );
+    if (occupiedSession) {
+      throw new Error(
+        "This fridge is currently linked to another active guest stay. Please finish checkout before starting a new stay.",
+      );
     }
 
     if (totalAuthorizedCents > 0) {
@@ -853,12 +968,12 @@ export const payRequiredTopUp = mutation({
         userId,
         type: "checkout_reconciled",
         title: "Checkout Complete",
-        message: "Your final top-up was received and your ChillStock tab is closed.",
+        message: "Your final top-up was received and your ChilledStock tab is closed.",
       });
       await syncIncomeTicketForRequest(ctx, {
         reconciliationRequestId: request._id,
         actorType: "system",
-        actorName: "ChillStock Billing",
+        actorName: "ChilledStock Billing",
         action: "closed",
         message: "Guest settled the outstanding checkout amount.",
         patch: {
@@ -895,7 +1010,7 @@ export const payRequiredTopUp = mutation({
     await syncTicketForReconciliation(ctx, {
       reconciliationRequestId: request._id,
       actorType: "system",
-      actorName: "ChillStock Billing",
+      actorName: "ChilledStock Billing",
       action: "resolved",
       message:
         request.type === "add_on"
@@ -910,7 +1025,7 @@ export const payRequiredTopUp = mutation({
     await syncIncomeTicketForRequest(ctx, {
       reconciliationRequestId: request._id,
       actorType: "system",
-      actorName: "ChillStock Billing",
+      actorName: "ChilledStock Billing",
       action: "closed",
       message:
         request.type === "add_on"

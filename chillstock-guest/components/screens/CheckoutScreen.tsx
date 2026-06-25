@@ -53,7 +53,9 @@ export function CheckoutScreen() {
   } = useAppContext();
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isExitingAfterStay, setIsExitingAfterStay] = useState(false);
   const [error, setError] = useState("");
+  const [exitError, setExitError] = useState("");
   const checkoutRequest =
     activeCheckoutRequest
       ? activeCheckoutRequest
@@ -75,8 +77,10 @@ export function CheckoutScreen() {
   const refundOutcome = Math.max(0, settlementBalance);
   const currentOpenSession = sessionHistory.find((entry) => entry.status !== "checked_out") ?? null;
   const previousSessions = sessionHistory.filter((entry) => entry.sessionId !== currentOpenSession?.sessionId);
+  const isInteractionLocked = isProcessing || isLoggingOut || isExitingAfterStay;
 
   const handleCheckoutRequest = async () => {
+    if (isInteractionLocked) return;
     setIsProcessing(true);
     setError("");
     try {
@@ -89,6 +93,7 @@ export function CheckoutScreen() {
   };
 
   const handleFinalTopUp = async () => {
+    if (isInteractionLocked) return;
     setIsProcessing(true);
     setError("");
     try {
@@ -99,17 +104,50 @@ export function CheckoutScreen() {
   };
 
   const handleLogout = async () => {
+    if (isLoggingOut) return;
     setError("");
+    setExitError("");
+    setIsExitingAfterStay(true);
     setIsLoggingOut(true);
     try {
       await logout();
       window.location.replace("/");
     } catch (logoutError) {
       console.error("Failed to log out guest", logoutError);
-      setError("We couldn't log out yet. Please try again.");
+      setExitError("We couldn't log out yet. Please try again.");
       setIsLoggingOut(false);
     }
   };
+
+  if (isExitingAfterStay) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center px-5 py-10 text-slate-950">
+        <div className="w-full max-w-md rounded-[2.4rem] border border-white/60 bg-white/62 p-7 text-center shadow-[0_28px_72px_rgba(108,123,153,0.18)] backdrop-blur-[20px]">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[1.75rem] border border-white/70 bg-teal-50 text-teal-700 shadow-[0_16px_34px_rgba(20,184,166,0.16)]">
+            <Icon name={exitError ? "alert" : "check-circle"} size={30} strokeWidth={1.6} />
+          </div>
+          <div className="mt-5 space-y-2">
+            <h1 className="font-display text-3xl font-bold tracking-tight text-slate-950">
+              Thanks for staying with us
+            </h1>
+            <p className={guestTypography.bodyMuted}>
+              {exitError ||
+                "We hope you had a good time. We're signing you out and closing this device session."}
+            </p>
+          </div>
+          <div className="mt-6 flex items-center justify-center">
+            {exitError ? (
+              <Button className="w-full" disabled={isLoggingOut} onClick={handleLogout}>
+                {isLoggingOut ? "Trying again..." : "Try logging out again"}
+              </Button>
+            ) : (
+              <div className="h-9 w-9 animate-spin rounded-full border-2 border-teal-600 border-t-transparent" />
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <AppShell>
@@ -139,7 +177,7 @@ export function CheckoutScreen() {
                 </p>
               </div>
               {error && <p className="text-center text-sm font-semibold text-red-500">{error}</p>}
-              <Button className="w-full" disabled={isLoggingOut} onClick={handleLogout}>
+              <Button className="w-full" disabled={isInteractionLocked} onClick={handleLogout}>
                 {isLoggingOut ? (
                   "Logging out..."
                 ) : (
@@ -173,7 +211,7 @@ export function CheckoutScreen() {
                   </p>
                 </div>
               </div>
-              <Button className="mt-5 w-full" disabled={isProcessing} onClick={handleFinalTopUp}>
+              <Button className="mt-5 w-full" disabled={isInteractionLocked} onClick={handleFinalTopUp}>
                 {isProcessing ? "Processing..." : `Pay ${formatCurrency(requiredTopUp)}`}
               </Button>
             </div>
@@ -188,7 +226,7 @@ export function CheckoutScreen() {
 
               <Button
                 className="w-full"
-                disabled={isProcessing || inventoryRequestBlocking}
+                disabled={isInteractionLocked || inventoryRequestBlocking}
                 onClick={handleCheckoutRequest}
               >
                 {isProcessing ? (

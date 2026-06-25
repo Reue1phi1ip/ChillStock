@@ -3,7 +3,7 @@ import { ConvexClientProvider } from "@/components/providers/ConvexClientProvide
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ChillStock Restocker",
+  title: "ChilledStock Restocker",
   description: "Operational queue for fridge reconciliation and restocking.",
 };
 

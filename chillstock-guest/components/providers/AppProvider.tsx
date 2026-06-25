@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuthActions } from "@convex-dev/auth/react";
+import { usePathname } from "next/navigation";
 import {
   createContext,
   type ReactNode,
@@ -22,6 +23,16 @@ export type Product = {
   type: string;
   price: number;
   imageColor: string;
+  imageUrl?: string;
+};
+
+type GuestCatalogItem = {
+  id: string;
+  name: string;
+  type: string;
+  priceCents: number;
+  imageColor: string;
+  imageUrl?: string;
 };
 
 export type CartItem = {
@@ -141,7 +152,9 @@ type AppContextValue = {
   guestDisplayName: string | null;
   user: { id: string; method: string; email?: string } | null;
   sessionStatus: "deposit_pending" | "active" | "checkout_pending" | "checked_out" | null;
+  fridgeCode: string | null;
   unlockCode: string | null;
+  accessCode: string | null;
   deposit: number;
   availableBalance: number;
   requiredTopUp: number;
@@ -206,6 +219,7 @@ const emptyProducts: Product[] = [];
 const CART_STORAGE_PREFIX = "chillstock:restock-cart:";
 const ADD_ON_CART_STORAGE_PREFIX = "chillstock:add-on-cart:";
 const GENERAL_REFRESH_STORAGE_PREFIX = "chillstock:general-refresh:";
+const DEMO_FRIDGE_CODE = "7429";
 
 function mapRequest(request: unknown): ReconciliationRequest | null {
   if (!request || typeof request !== "object") return null;
@@ -251,6 +265,7 @@ function mapRequest(request: unknown): ReconciliationRequest | null {
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
   const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth();
   const {
     bootstrappedSessionId,
@@ -259,7 +274,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     sessionBootstrapError,
   } = useAuthBootstrap();
   const { signOut } = useAuthActions();
-  const sessionState = useQuery(api.sessions.getCurrent);
+  const includeCheckedOutSession = pathname === "/checkout";
+  const sessionState = useQuery(api.sessions.getCurrent, {
+    includeCheckedOut: includeCheckedOutSession,
+  });
   const sessionHistoryState = useQuery(api.history.listCurrentUserHistory);
   const currentUserState = useQuery(api.users.current);
   const authorizeDepositHold = useMutation(api.sessions.authorizeDepositHold);
@@ -270,6 +288,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const dismissNotificationMutation = useMutation(api.notifications.dismiss);
 
   const session = sessionState?.session ?? null;
+  const fridgeCode = sessionState?.fridgeCode ?? null;
+  const accessCode = fridgeCode === DEMO_FRIDGE_CODE ? fridgeCode : (session?.unlockCode ?? null);
   const inventoryState = useQuery(
     api.inventory.getGuestCatalog,
     session ? { fridgeId: session.fridgeId } : "skip",
@@ -337,12 +357,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return (sessionState?.requests ?? []).map(mapRequest).filter(Boolean) as ReconciliationRequest[];
   }, [sessionState?.requests]);
   const inventory = useMemo<Product[]>(() => {
-    return (inventoryState ?? []).map((item: any) => ({
+    return ((inventoryState ?? []) as GuestCatalogItem[]).map((item) => ({
       id: item.id,
       name: item.name,
       type: item.type,
       price: centsToEuros(item.priceCents),
       imageColor: item.imageColor,
+      imageUrl: item.imageUrl,
     }));
   }, [inventoryState]);
   const mainMenuInventory = useMemo(
@@ -443,59 +464,61 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!cartStorageKey || typeof window === "undefined") {
-      setCartItems([]);
+      queueMicrotask(() => setCartItems([]));
       return;
     }
 
     try {
       const rawValue = window.localStorage.getItem(cartStorageKey);
       if (!rawValue) {
-        setCartItems([]);
+        queueMicrotask(() => setCartItems([]));
         return;
       }
 
       const parsed = JSON.parse(rawValue) as CartItem[];
-      setCartItems(
+      const nextCartItems =
         Array.isArray(parsed)
           ? parsed.filter((item) => typeof item.productId === "string" && item.quantity > 0)
-          : [],
-      );
+          : [];
+      queueMicrotask(() => setCartItems(nextCartItems));
     } catch {
-      setCartItems([]);
+      queueMicrotask(() => setCartItems([]));
     }
   }, [cartStorageKey]);
 
   useEffect(() => {
     if (!addOnCartStorageKey || typeof window === "undefined") {
-      setAddOnCartItems([]);
+      queueMicrotask(() => setAddOnCartItems([]));
       return;
     }
 
     try {
       const rawValue = window.localStorage.getItem(addOnCartStorageKey);
       if (!rawValue) {
-        setAddOnCartItems([]);
+        queueMicrotask(() => setAddOnCartItems([]));
         return;
       }
 
       const parsed = JSON.parse(rawValue) as CartItem[];
-      setAddOnCartItems(
+      const nextAddOnCartItems =
         Array.isArray(parsed)
           ? parsed.filter((item) => typeof item.productId === "string" && item.quantity > 0)
-          : [],
-      );
+          : [];
+      queueMicrotask(() => setAddOnCartItems(nextAddOnCartItems));
     } catch {
-      setAddOnCartItems([]);
+      queueMicrotask(() => setAddOnCartItems([]));
     }
   }, [addOnCartStorageKey]);
 
   useEffect(() => {
     if (!generalRefreshStorageKey || typeof window === "undefined") {
-      setGeneralRefreshSelectionState(false);
+      queueMicrotask(() => setGeneralRefreshSelectionState(false));
       return;
     }
 
-    setGeneralRefreshSelectionState(window.localStorage.getItem(generalRefreshStorageKey) === "1");
+    const nextGeneralRefreshSelection =
+      window.localStorage.getItem(generalRefreshStorageKey) === "1";
+    queueMicrotask(() => setGeneralRefreshSelectionState(nextGeneralRefreshSelection));
   }, [generalRefreshStorageKey]);
 
   useEffect(() => {
@@ -677,7 +700,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         guestDisplayName,
         user: session ? { id: session.userId, method: "convex" } : null,
         sessionStatus: session?.status ?? null,
+        fridgeCode,
         unlockCode: session?.unlockCode ?? null,
+        accessCode,
         deposit: centsToEuros(sessionState?.totalAuthorizedCents),
         availableBalance: centsToEuros(sessionState?.availableBalanceCents),
         requiredTopUp: centsToEuros(topUpRequest?.topUpRequiredCents),

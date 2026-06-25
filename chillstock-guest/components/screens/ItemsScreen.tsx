@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { Icon, type IconName } from "@/components/icons/Icon";
 import { AppShell } from "@/components/layout/AppShell";
 import { useAppContext, type CartItem, type Product } from "@/components/providers/AppProvider";
@@ -86,6 +88,7 @@ function ProductCard({
   quantity: number;
 }) {
   const productIcon = iconForProductType(product.type);
+  const [imageFailed, setImageFailed] = useState(false);
 
   return (
     <Card className="overflow-hidden rounded-[1.7rem] p-0" key={product.id}>
@@ -95,10 +98,24 @@ function ProductCard({
           product.imageColor || "bg-amber-100",
         )}
       >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.55),transparent_58%)]" />
-        <div className="relative flex h-12 w-12 items-center justify-center rounded-[1rem] border border-white/50 bg-white/70 text-slate-900 shadow-[0_16px_30px_rgba(74,88,118,0.1)] backdrop-blur sm:h-14 sm:w-14">
-          <Icon name={productIcon} size={24} strokeWidth={1.7} />
-        </div>
+        {product.imageUrl && !imageFailed ? (
+          <Image
+            alt=""
+            className="object-cover"
+            fill
+            loading="lazy"
+            onError={() => setImageFailed(true)}
+            sizes="(min-width: 640px) 260px, 50vw"
+            src={product.imageUrl}
+          />
+        ) : (
+          <>
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.55),transparent_58%)]" />
+            <div className="relative flex h-12 w-12 items-center justify-center rounded-[1rem] border border-white/50 bg-white/70 text-slate-900 shadow-[0_16px_30px_rgba(74,88,118,0.1)] backdrop-blur sm:h-14 sm:w-14">
+              <Icon name={productIcon} size={24} strokeWidth={1.7} />
+            </div>
+          </>
+        )}
       </div>
 
       <div className="space-y-2.5 p-2.5">
