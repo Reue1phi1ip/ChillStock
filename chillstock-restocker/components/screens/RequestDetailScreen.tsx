@@ -726,8 +726,8 @@ export function RequestDetailScreen() {
                     <dd className="mt-1 font-semibold text-slate-950">{fridge?.name ?? "Unknown fridge"}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Fridge code</dt>
-                    <dd className="mt-1 font-semibold text-slate-950">{fridge?.code ?? "No code"}</dd>
+                    <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Fridge QR</dt>
+                    <dd className="mt-1 font-semibold text-slate-950">{fridge?.code ?? "No QR"}</dd>
                   </div>
                   <div>
                     <dt className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Location</dt>
@@ -758,7 +758,7 @@ export function RequestDetailScreen() {
                     </div>
                     <p className="text-xs text-emerald-800">
                       {prototypeFeedback ||
-                        "Prototype mode launches the guest app with this fridge code before printed QR labels exist."}
+                        "Prototype mode launches the guest app with this fridge QR before printed QR labels exist."}
                     </p>
                   </div>
                 ) : null}

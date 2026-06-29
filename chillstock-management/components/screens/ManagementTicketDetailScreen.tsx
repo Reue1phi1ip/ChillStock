@@ -662,8 +662,8 @@ export function ManagementTicketDetailScreen({
                 value={detail.fridge?.name ?? "No fridge linked"}
               />
               <MetaLine
-                label="Fridge code"
-                value={detail.fridge?.code ?? "No fridge code"}
+                label="Fridge QR"
+                value={detail.fridge?.code ?? "No QR"}
               />
               <MetaLine
                 label="Location"

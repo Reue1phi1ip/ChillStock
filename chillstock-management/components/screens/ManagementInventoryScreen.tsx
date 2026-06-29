@@ -383,7 +383,7 @@ export function ManagementInventoryScreen() {
                   <tr>
                     <TH>Hotel</TH>
                     <TH>Fridge name</TH>
-                    <TH>Code</TH>
+                    <TH>QR</TH>
                     <TH>Location</TH>
                     <TH>Area</TH>
                     <TH>Status</TH>
@@ -448,7 +448,7 @@ export function ManagementInventoryScreen() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Fridge code
+                Fridge QR
               </label>
               <Input
                 onChange={(event) =>

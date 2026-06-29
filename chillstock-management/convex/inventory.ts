@@ -292,7 +292,7 @@ export const saveFridge = mutation({
   handler: async (ctx, args) => {
     const code = args.code.trim();
     const name = args.name.trim();
-    if (!code) throw new Error("Fridge code is required");
+    if (!code) throw new Error("Fridge QR is required");
     if (!name) throw new Error("Fridge name is required");
 
     const existingByCode = await ctx.db
@@ -301,7 +301,7 @@ export const saveFridge = mutation({
       .unique();
 
     if (existingByCode && existingByCode._id !== args.fridgeId) {
-      throw new Error("Another fridge already uses this code");
+      throw new Error("Another fridge already uses this QR");
     }
 
     const payload = {

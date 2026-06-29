@@ -236,7 +236,7 @@ async function resolveFridgeByCode(
 ) {
   const normalizedCode = normalizeFridgeCode(fridgeCode);
   if (!normalizedCode) {
-    throw new Error("Scan a valid fridge QR code to continue.");
+    throw new Error("Scan a valid fridge QR to continue.");
   }
 
   let fridge = await findFridgeByCode(ctx, normalizedCode);
@@ -246,7 +246,7 @@ async function resolveFridgeByCode(
   }
 
   if (!fridge) {
-    throw new Error("This fridge code was not recognized.");
+    throw new Error("This fridge QR was not recognized.");
   }
 
   if (fridge.status !== "active") {
@@ -821,7 +821,7 @@ export const authorizeDepositHold = mutation({
     const amountCents = args.amountCents ?? DEFAULT_DEPOSIT_HOLD_CENTS;
     let session = await getOrCreateCurrentSession(ctx, userId);
     if (!session) {
-      throw new Error("Scan a fridge QR code before adding a deposit.");
+      throw new Error("Scan a fridge QR before adding a deposit.");
     }
     let totalAuthorizedCents = await totalAuthorizedCentsForSession(ctx, session._id);
 
